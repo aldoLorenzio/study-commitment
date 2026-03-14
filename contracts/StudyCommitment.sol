@@ -55,4 +55,18 @@ contract StudyCommitment{
         emit SessionCompleted(challenge.student, challenge.stakedAmount);
     }
 
+    function failSession(uint256 _challengeId) external{
+        Challenge storage challenge = challenges[_challengeId];
+
+        require(msg.sender == challenge.student, "Only creator can mark complete!");
+        require(challenge.currentStatus == Status.Active, "Status session must be active!");
+        require(block.timestamp > challenge.deadline,"Deadline not passed yet!");
+
+        challenge.currentStatus = Status.Failed;
+        (bool success, ) = payable(charityAddress).call{value: challenge.stakedAmount}("");
+        require(success, "Transfer failed");
+
+        emit SessionFailed(charityAddress, challenge.stakedAmount);
+    }
+
 }
