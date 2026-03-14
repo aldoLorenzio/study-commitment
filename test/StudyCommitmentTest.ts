@@ -34,7 +34,8 @@ describe("Study commitment", async() =>{
         const { study, deployer, randomAccount } = await deploy();
         await study.write.createSession([1800n], {
             value: parseEther("0.01"),
-            account:deployer.account});
+            account:deployer.account
+        });
 
         await assert.rejects(
             () => study.write.completeSession([0n], { account: randomAccount.account} ),
@@ -45,5 +46,17 @@ describe("Study commitment", async() =>{
         )
     });
 
+    it("should reject session with 0 ETH", async() =>{
+        const { study, deployer } = await deploy();
 
+        await assert.rejects(
+            () => study.write.createSession([1800n], {
+            value: parseEther("0"),
+            account:deployer.account
+        }),
+        (err: any) =>{
+            assert.ok(err.message.includes("Must stake some ETH"));
+            return true;
+        })
+    });
 })
