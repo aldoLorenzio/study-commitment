@@ -59,4 +59,31 @@ describe("Study commitment", async() =>{
             return true;
         })
     });
+
+        it("should return ETH to student when session completed and change ", async() =>{
+        const { viem, study, deployer } = await deploy();
+
+        const publicClient = await viem.getPublicClient();
+        const balanceBefore = await publicClient.getBalance({
+            address: deployer.account.address
+        });
+
+        await study.write.createSession([1800n],{
+            value: parseEther("0.01"),
+            account: deployer.account
+        });
+
+        await study.write.completeSession([0n],{
+            account: deployer.account
+        });
+
+        const balanceAfter = await publicClient.getBalance({
+            address: deployer.account.address
+        });
+        const session = await study.read.getSession([0n]);
+
+        const diff = balanceBefore - balanceAfter;
+        assert.ok(diff < parseEther("0.01"),"ETH not returned to student")
+        assert.equal(session.currentStatus, 2); // 2 ini enum completed di contract
+    });
 })
