@@ -184,4 +184,20 @@ describe("Study commitment", async() =>{
                 return true
             });
     });
+
+    it("should reject failSession before deadline", async() =>{
+        const { study, deployer, randomAccount } = await deploy();
+
+        await study.write.createSession([1800n],{
+            value: parseEther("0.01"),
+            account: deployer.account
+        });
+
+        await assert.rejects(
+            () => study.write.failSession([0n], { account: randomAccount.account }),
+            (err:any) =>{
+                assert.ok(err.message.includes("Deadline not passed yet!"));
+                return true
+            });
+    });
 })
