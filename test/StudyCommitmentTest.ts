@@ -30,4 +30,18 @@ describe("Study commitment", async() =>{
         assert.equal(session.student.toLowerCase(), student.account.address.toLowerCase());
     });
 
+    it("should reject if non creator tries to complete session", async() =>{
+        const { study, student, owner } = await deploy();
+        await study.write.createSession([1800n], {
+            value: parseEther("0.01"),
+            account:student.account});
+
+        await assert.rejects(
+            () => study.write.completeSession([0n], { account: owner.account} ),
+            (err: any ) => {
+                assert.ok(err.message.includes("Only creator can mark complete!"));
+                return true;
+            }
+        )
+    });
 })
