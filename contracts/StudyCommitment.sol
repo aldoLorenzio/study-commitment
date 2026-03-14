@@ -41,4 +41,18 @@ contract StudyCommitment{
         emit SessionStarted(msg.sender, block.timestamp + _duration, msg.value);
     }
 
+    function completeSession(uint256 _challengeId) external{
+        Challenge storage challenge = challenges[_challengeId];
+
+        require(msg.sender == challenge.student, "Only creator can mark complete!");
+        require(challenge.currentStatus == Status.Active, "Status session must be active!");
+        require(block.timestamp < challenge.deadline, "Deadline already been passed");
+
+        challenge.currentStatus = Status.Completed;
+        (bool success, ) = payable(challenge.student).call{value: challenge.stakedAmount}("");
+        require(success, "Transfer failed");
+
+        emit SessionCompleted(challenge.student, challenge.stakedAmount);
+    }
+
 }
