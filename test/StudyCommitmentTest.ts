@@ -2,6 +2,7 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { network } from "hardhat";
 import { parseEther } from "viem";
+import hre from "hardhat";
 
 describe("Study commitment", async() =>{
     async function deploy(){
@@ -60,7 +61,7 @@ describe("Study commitment", async() =>{
         })
     });
 
-        it("should return ETH to student when session completed and change ", async() =>{
+    it("should return ETH to student when session completed and change ", async() =>{
         const { viem, study, deployer } = await deploy();
 
         const publicClient = await viem.getPublicClient();
@@ -85,5 +86,102 @@ describe("Study commitment", async() =>{
         const diff = balanceBefore - balanceAfter;
         assert.ok(diff < parseEther("0.01"),"ETH not returned to student")
         assert.equal(session.currentStatus, 2); // 2 ini enum completed di contract
+    });
+
+    it("should send ETH to charity when deployer click session failed", async() => {
+        const { viem, study, deployer, charityAccount } = await deploy();
+
+        const publicClient = await viem.getPublicClient();
+        const charityBalanceBefore = await publicClient.getBalance({
+            address: charityAccount.account.address
+        });
+
+        await study.write.createSession([1800n],{
+            value: parseEther("0.01"),
+            account: deployer.account
+        });
+
+        await publicClient.request({
+            method: "evm_increaseTime" as any,
+            params: [2000] as any
+        });
+        await publicClient.request({
+            method:"evm_mine" as any,
+            params: [] as any
+        });
+
+        await study.write.failSession([0n],{
+            account: deployer.account
+        })
+
+        const charityBalanceAfter = await publicClient.getBalance({
+            address: charityAccount.account.address
+        });
+
+        const session = await study.read.getSession([0n]);
+        assert.ok(charityBalanceAfter > charityBalanceBefore);
+        assert.equal(session.currentStatus, 3) //3 ini enum failed
+    })
+
+    it("should send ETH to charity when randomAccount click session failed", async() => {
+        const { viem, study, deployer, charityAccount, randomAccount } = await deploy();
+
+        const publicClient = await viem.getPublicClient();
+        const charityBalanceBefore = await publicClient.getBalance({
+            address: charityAccount.account.address
+        });
+
+        await study.write.createSession([1800n],{
+            value: parseEther("0.01"),
+            account: deployer.account
+        });
+
+        await publicClient.request({
+            method: "evm_increaseTime" as any,
+            params: [2000] as any
+        });
+        await publicClient.request({
+            method:"evm_mine" as any,
+            params: [] as any
+        });
+
+        await study.write.failSession([0n],{
+            account: randomAccount.account
+        })
+
+        const charityBalanceAfter = await publicClient.getBalance({
+            address: charityAccount.account.address
+        });
+
+        const session = await study.read.getSession([0n]);
+        assert.ok(charityBalanceAfter > charityBalanceBefore);
+        assert.equal(session.currentStatus, 3) //3 ini enum failed
+    })
+
+    it("should reject completeSession after deadline passed", async() =>{
+        const {viem, study, deployer } = await deploy();
+        const publicClient = await viem.getPublicClient();
+
+        await study.write.createSession([1800n],{
+            value:parseEther("0.01"),
+            account: deployer.account
+        });
+
+        await publicClient.request({
+            method: "evm_increaseTime" as any,
+            params: [2000] as any
+        });
+
+        await publicClient.request({
+            method: "evm_mine" as any,
+            params: [] as any
+        })
+
+        await assert.rejects(
+            () => study.write.completeSession([0n], {account: deployer.account}),
+            (err: any) =>{
+                assert.ok(err.message.includes("Deadline already been passed"));
+                return true
+            });
     });
 })

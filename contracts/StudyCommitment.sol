@@ -58,7 +58,6 @@ contract StudyCommitment{
     function failSession(uint256 _challengeId) external{
         Challenge storage challenge = challenges[_challengeId];
 
-        require(msg.sender == challenge.student, "Only creator can mark complete!");
         require(challenge.currentStatus == Status.Active, "Status session must be active!");
         require(block.timestamp > challenge.deadline,"Deadline not passed yet!");
 
