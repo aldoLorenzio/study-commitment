@@ -26,4 +26,19 @@ contract StudyCommitment{
     event SessionCompleted(address indexed student, uint256 stakedAmount);
     event SessionFailed(address _charityAddress, uint256 stakedAmount);
 
+    function createSession(uint256 _duration) external payable {
+        Challenge storage challenge = challenges[challengeCount];
+        require(msg.value > 0, "Must stake some ETH");
+        require(challenge.currentStatus != Status.Active, "Already in a session");
+
+        challenge.student = msg.sender;
+        challenge.stakedAmount = msg.value;
+        challenge.startTime = block.timestamp;
+        challenge.deadline = block.timestamp + _duration;
+        challenge.currentStatus = Status.Active;
+
+        challengeCount++;
+        emit SessionStarted(msg.sender, block.timestamp + _duration, msg.value);
+    }
+
 }
