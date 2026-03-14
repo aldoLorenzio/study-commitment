@@ -69,4 +69,8 @@ contract StudyCommitment{
         emit SessionFailed(charityAddress, challenge.stakedAmount);
     }
 
+    function getSession(uint256 _challengeId) external view returns (Challenge memory){
+        return challenges[_challengeId];
+    }
+
 }
