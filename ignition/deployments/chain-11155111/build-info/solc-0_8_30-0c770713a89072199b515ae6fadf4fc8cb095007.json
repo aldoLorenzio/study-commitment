@@ -1,0 +1,39 @@
+{
+  "_format": "hh3-sol-build-info-1",
+  "id": "solc-0_8_30-0c770713a89072199b515ae6fadf4fc8cb095007",
+  "solcVersion": "0.8.30",
+  "solcLongVersion": "0.8.30+commit.73712a01",
+  "userSourceNameMap": {
+    "contracts/StudyCommitment.sol": "project/contracts/StudyCommitment.sol"
+  },
+  "input": {
+    "language": "Solidity",
+    "settings": {
+      "evmVersion": "prague",
+      "optimizer": {
+        "enabled": true,
+        "runs": 200
+      },
+      "outputSelection": {
+        "*": {
+          "": [
+            "ast"
+          ],
+          "*": [
+            "abi",
+            "evm.bytecode",
+            "evm.deployedBytecode",
+            "evm.methodIdentifiers",
+            "metadata"
+          ]
+        }
+      },
+      "remappings": []
+    },
+    "sources": {
+      "project/contracts/StudyCommitment.sol": {
+        "content": "// SPDX-License-Identifier: MIT\r\npragma solidity ^0.8.30;\r\n\r\ncontract StudyCommitment{\r\n    enum Status { Inactive, Active, Completed, Failed}\r\n\r\n    struct Challenge{\r\n        address student;\r\n        uint256 stakedAmount;\r\n        uint256 startTime;\r\n        uint256 deadline;\r\n        Status currentStatus;\r\n    }\r\n\r\n    mapping(uint256 => Challenge) public challenges;\r\n    uint256 public challengeCount;\r\n    address public owner;\r\n    address public charityAddress;\r\n\r\n    constructor(address _charityAddress){\r\n        owner = msg.sender;\r\n        charityAddress = _charityAddress;\r\n    }\r\n\r\n    event SessionStarted(address indexed student, uint256 deadline, uint256 stakedAmount);\r\n    event SessionCompleted(address indexed student, uint256 stakedAmount);\r\n    event SessionFailed(address _charityAddress, uint256 stakedAmount);\r\n\r\n    function createSession(uint256 _duration) external payable {\r\n        Challenge storage challenge = challenges[challengeCount];\r\n        require(msg.value > 0, \"Must stake some ETH\");\r\n        require(challenge.currentStatus != Status.Active, \"Already in a session\");\r\n\r\n        challenge.student = msg.sender;\r\n        challenge.stakedAmount = msg.value;\r\n        challenge.startTime = block.timestamp;\r\n        challenge.deadline = block.timestamp + _duration;\r\n        challenge.currentStatus = Status.Active;\r\n\r\n        challengeCount++;\r\n        emit SessionStarted(msg.sender, block.timestamp + _duration, msg.value);\r\n    }\r\n\r\n    function completeSession(uint256 _challengeId) external{\r\n        Challenge storage challenge = challenges[_challengeId];\r\n\r\n        require(msg.sender == challenge.student, \"Only creator can mark complete!\");\r\n        require(challenge.currentStatus == Status.Active, \"Status session must be active!\");\r\n        require(block.timestamp < challenge.deadline, \"Deadline already been passed\");\r\n\r\n        challenge.currentStatus = Status.Completed;\r\n        (bool success, ) = payable(challenge.student).call{value: challenge.stakedAmount}(\"\");\r\n        require(success, \"Transfer failed\");\r\n\r\n        emit SessionCompleted(challenge.student, challenge.stakedAmount);\r\n    }\r\n\r\n    function failSession(uint256 _challengeId) external{\r\n        Challenge storage challenge = challenges[_challengeId];\r\n\r\n        require(challenge.currentStatus == Status.Active, \"Status session must be active!\");\r\n        require(block.timestamp > challenge.deadline,\"Deadline not passed yet!\");\r\n\r\n        challenge.currentStatus = Status.Failed;\r\n        (bool success, ) = payable(charityAddress).call{value: challenge.stakedAmount}(\"\");\r\n        require(success, \"Transfer failed\");\r\n\r\n        emit SessionFailed(charityAddress, challenge.stakedAmount);\r\n    }\r\n\r\n    function getSession(uint256 _challengeId) external view returns (Challenge memory){\r\n        return challenges[_challengeId];\r\n    }\r\n\r\n}"
+      }
+    }
+  }
+}
